@@ -12,6 +12,8 @@ Installed package kml2geojson - gave cli option to convert kml to a geojson
 Used geopandas to remove pushpin info wrote back to file with names/geometry as POLYGON Z
 
 
+Deferred work:
+Use the gml_transform script as a basis for assessing the downloaded jp2 for clouds before processing
 
 --------------------------------------------------------------------------------------------------------
 Structure:

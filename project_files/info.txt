@@ -30,12 +30,6 @@ paddock = {'P1' : {'lat': '42.171890', 'lon': '-89.146726'},
 			'P22' : {'lat': '42.172763', 'lon': '-89.149132'},
 			'P23' : {'lat': '42.172661', 'lon': '-89.148135'}}
 
-
-
-
-
-
-
-
-
 '''
+
+TODO: build processing for checking cloudiness over the farm outline
