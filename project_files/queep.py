@@ -6,3 +6,4 @@ def geojson_simplify(in_file, out_file):
     farm = gpd.read_file(in_file)
     farm_simp = farm[['name', 'geometry']]
     farm_simp.to_file(out_file, driver='GeoJSON')
+

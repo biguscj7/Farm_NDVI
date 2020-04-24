@@ -129,7 +129,7 @@ class SentinelPass:
 
     def avail_paddocks(self):
         """Processes the GeoJSON path in use by the instance and returns a list of names"""
-        return self.all_mask['name']
+        return list(self.all_mask['name'])
 
     # TODO: transform 2D array to RGB for writing PNG in desired colors
 

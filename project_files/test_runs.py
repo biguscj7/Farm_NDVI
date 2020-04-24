@@ -8,5 +8,10 @@ first_test = SentinelPass('../data/S2A_MSIL2A_20200418T164901_N0214_R026_T16TCM_
                           './farm_simple.geojson')
 
 if __name__ == '__main__':
-    #pp(first_test.avail_paddocks())
-    pp(first_test.paddock_stats('East 18 South', 'evi'))
+    evi_dict = {}
+    all_paddocks = first_test.avail_paddocks()
+    for paddock in all_paddocks:
+        evi_dict.update(first_test.paddock_stats(paddock, 'evi'))
+    pp(evi_dict)
+
+    #pp(first_test.paddock_stats('East 18 South', 'evi'))
