@@ -122,7 +122,7 @@ class SentinelPass:
                 'median': np.nanmedian(paddock_data),
                 'std': np.nanstd(paddock_data),
                 'var': np.nanvar(paddock_data),
-                'pixels': np.count_nonzero(~np.isnan(paddock_data))
+                'pixels': np.count_nonzero(paddock_data)
             }}
         return pdk_data_dict
 
