@@ -24,18 +24,29 @@ from datetime import datetime as dt
 
 
 class SentinelPass:
-    def __init__(self, b4_path: str,
-                 b8_path: str,
-                 b2_path: str,
+    def __init__(self, safe_path: str,
                  gjson_path: str):
         """Initializes class with the paths b4 and b8 jp2's and GeoJSON path"""
-        self.b4_path = b4_path
-        self.b2_path = b2_path
-        self.b8_path = b8_path
+        self.safe_path = safe_path
+        self._find_files(self.safe_path)
         self.all_mask = gpd.read_file(gjson_path)
         self._pull_padded_box()
         self._evi_square()
         self._ndvi_square()
+
+    def _find_files(self, safe_path: str):
+        """Accepts the base path for a set of download files and pulls the string for each desired band"""
+        for root, dirs, files in os.walk(safe_path):
+            for file in files:
+                if file.endswith("B02_10m.jp2"):
+                    #print("Band 2 file " + os.path.join(root, file))
+                    self.b2_path = os.path.join(root, file)
+                elif file.endswith("B04_10m.jp2"):
+                    #print("Band 4 file " + os.path.join(root, file))
+                    self.b4_path = os.path.join(root, file)
+                elif file.endswith("B08_10m.jp2"):
+                    #print("Band 8 file " + os.path.join(root, file))
+                    self.b8_path = os.path.join(root, file)
 
 
     def _pull_padded_box(self):
@@ -134,20 +145,9 @@ class SentinelPass:
         return list(self.all_mask['name'])
 
 
-    def find_files(self, safe_path: str):
-        for root, dirs, files in os.walk(safe_path):
-            for file in files:
-                if file.endswith("b02.jp2"):
-                    print("Band 2 file " + os.path.join(root, file))
-                elif file.endswith("b04.jp2"):
-                    print("Band 4 file " + os.path.join(root, file))
-                elif file.endswith("b08.jp2"):
-                    print("Band 8 file " + os.path.join(root, file))
-                    
-
     def name_to_time(self, b2_name):
         split_name = b2_name.split('-')
-        self.sense_date = dt.strftime(split_name[2], %Y%m%d'T'%H%M%S)
+        self.sense_date = dt.strftime(split_name[2], '%Y%m%dT%H%M%S')
 
     # TODO: use matlab cmap to color the square NDVI/EVI
 
