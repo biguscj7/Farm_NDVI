@@ -1,16 +1,17 @@
 '''
 This class will be used for processing data once it has been downloaded. The process of
-querying the API for Sentinel data will be handles elsewhere.
+querying the API for Sentinel data will be handled elsewhere.
 
-The class will accept the paths for the b4 and b8 images from a pass as well as an sqlite
-database name. It will allow the user to process the images to return NDVI info for each
-paddock.
+The class will accept the paths for the b2, b4, and b8 images from a Sentinel-2 collect and compute the NDVI
+and EVI for an area.
 
 MVP:
 Process single satellite pass into NDVI/EVI stats/info for each paddock individually
 
 Follow-on capes:
 Create KML with paddock data embedded.
+Put results in database.
+Save scaled down EVI and NDVI geotiffs
 '''
 
 import rasterio
@@ -19,6 +20,7 @@ import geopandas as gpd
 import numpy as np
 from pprint import pprint as pp
 import os
+from datetime import datetime as dt
 
 
 class SentinelPass:
@@ -61,7 +63,7 @@ class SentinelPass:
         self.ndvi = (self.nir - self.red) / (self.nir + self.red)
         b4_out_meta.update({'dtype': rasterio.float64})
 
-        with rasterio.open('ndvi_masked.tiff', 'w', **b4_out_meta) as dest:
+        with rasterio.open('ndvi_masked.tiff', 'w', **b4_out_meta) as dest: # refactor to include datetime in name
             dest.write(self.ndvi.astype(rasterio.float64))
 
 
@@ -87,7 +89,7 @@ class SentinelPass:
         self.evi = 2.5 * (self.nir - self.red) / ((self.nir + 6.0 * self.red - 7.5 * self.blue) + 1.0)
         b4_out_meta.update({'dtype': rasterio.float64})
 
-        with rasterio.open('evi_masked.tiff', 'w', **b4_out_meta) as dest:
+        with rasterio.open('evi_masked.tiff', 'w', **b4_out_meta) as dest: # refactor to include datetime info
             dest.write(self.evi.astype(rasterio.float64))
 
 
@@ -127,11 +129,27 @@ class SentinelPass:
         return pdk_data_dict
 
 
-    def avail_paddocks(self):
+    def available_paddocks(self):
         """Processes the GeoJSON path in use by the instance and returns a list of names"""
         return list(self.all_mask['name'])
 
-    # TODO: transform 2D array to RGB for writing PNG in desired colors
+
+    def find_files(self, safe_path: str):
+        for root, dirs, files in os.walk(safe_path):
+            for file in files:
+                if file.endswith("b02.jp2"):
+                    print("Band 2 file " + os.path.join(root, file))
+                elif file.endswith("b04.jp2"):
+                    print("Band 4 file " + os.path.join(root, file))
+                elif file.endswith("b08.jp2"):
+                    print("Band 8 file " + os.path.join(root, file))
+                    
+
+    def name_to_time(self, b2_name):
+        split_name = b2_name.split('-')
+        self.sense_date = dt.strftime(split_name[2], %Y%m%d'T'%H%M%S)
+
+    # TODO: use matlab cmap to color the square NDVI/EVI
 
     # TODO: connect to database
 
