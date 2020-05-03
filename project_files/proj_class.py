@@ -29,32 +29,43 @@ import shutil
 class SentinelPass:
     def __init__(self, safe_path: str,
                  gjson_path: str):
-        """Initializes class with the paths b4 and b8 jp2's and GeoJSON path"""
+        """Initializes class with the Sentinel SAFE folder path and GeoJSON path"""
         self.safe_path = safe_path
         self._find_files(self.safe_path)
         self._name_to_time(self.b2_fn)
         self._all_mask = gpd.read_file(gjson_path)
         self._pull_padded_box()
         if f"ndvi_{self.sense_date.strftime('%Y%m%d')}.tiff" not in os.listdir('./pics/'):
-            self._reproject_wgs84()
+            for k, v in self.band_dict.items():
+                self._reproject_wgs84(k, v)
             self._ndvi_square()
             self._evi_square()
             self._tmp_img_cleanup()
 
-    def _find_files(self, safe_folder: str):
-        """Accepts the base path for a set of download files and pulls the string for each desired band"""
+    def _find_files(self, safe_folder: str) -> dict:
+        """Accepts the base path for a set of download files and returns dictionary with file paths for multiple items"""
+        self.band_dict = {
+            'band02': '',
+            'band03': '',
+            'band04': '',
+            'band08': '',
+            'clouds': ''
+        }
+
         for root, dirs, files in os.walk(f'../data/{safe_folder}'):
             for file in files:
                 if file.endswith("B02_10m.jp2"):
-                    # print("Band 2 file " + os.path.join(root, file))
-                    self.b2_path = os.path.join(root, file)
+                    band_dict['band02'] = os.path.join(root, file)
                     self.b2_fn = file # pulls filename rather than path for parsing datetime
+                elif file.endswith("B03_10m.jp2"):
+                    band_dict['band03'] = os.path.join(root, file)
                 elif file.endswith("B04_10m.jp2"):
-                    # print("Band 4 file " + os.path.join(root, file))
-                    self.b4_path = os.path.join(root, file)
+                    band_dict['band04'] = os.path.join(root, file)
                 elif file.endswith("B08_10m.jp2"):
-                    # print("Band 8 file " + os.path.join(root, file))
-                    self.b8_path = os.path.join(root, file)
+                    band_dict['band08'] = os.path.join(root, file)
+                elif file.endswith("PRB_20m.jp2"):
+                    band_dict['clouds'] = os.path.join(root, file)
+
 
     def _pull_padded_box(self):
         """Pulls padded box info from the geojson file and sets attribute to an epsg:32616 geometry"""
@@ -63,20 +74,12 @@ class SentinelPass:
         #self.pad_geom_m = pad_geom.to_crs('epsg:32616')  # convert this geometry to the frame for
 
     # TODO: Implement delete of data file once bands have been pulled
-    def _reproject_wgs84(self):
+    def _reproject_wgs84(self, band, file_path):
         """Reprojects jp2 into WGS84 crs and writes as GeoTIFF prior to masking file"""
-
-        for x in [self.b2_path, self.b4_path, self.b8_path]:
-            if 'b04' in x.lower():
-                band_fn = 'b4'
-            elif 'b02' in x.lower():
-                band_fn = 'b2'
-            elif 'b08' in x.lower():
-                band_fn = 'b8'
 
             dst_crs = 'epsg:4326'
 
-            with rasterio.open(x, 'r') as src:
+            with rasterio.open(file_path, 'r') as src:
                 transform, width, height = calculate_default_transform(
                     src.crs, dst_crs, src.width, src.height, *src.bounds)
                 kwargs = src.meta.copy()
@@ -88,7 +91,7 @@ class SentinelPass:
                     'driver': 'GTiff'
                 })
 
-                with rasterio.open(f'./tmp_img/{band_fn}.tif', 'w', **kwargs) as dst:
+                with rasterio.open(f'./tmp_img/{band}.tiff', 'w', **kwargs) as dst:
                     reproject(source=rasterio.band(src, 1),
                               destination=rasterio.band(dst, 1),
                               src_transform=src.transform,
@@ -97,7 +100,7 @@ class SentinelPass:
                               dst_crs=dst_crs,
                               resampling=Resampling.nearest)
 
-
+    # TODO: Refactor for use of dictionary to track filenames through initialization
     def _ndvi_square(self):
         """parses the b4 and b8 data down to a simple square around the farm"""
         with rasterio.open('./tmp_img/b4.tif', 'r') as b4:
