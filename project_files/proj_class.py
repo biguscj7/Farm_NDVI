@@ -24,6 +24,7 @@ from datetime import datetime as dt
 from matplotlib import colors
 from matplotlib import pyplot as plt
 import shutil
+import json
 
 
 class SentinelPass:
@@ -40,6 +41,9 @@ class SentinelPass:
                 self._reproject_wgs84(k, v)
             self._ndvi_square()
             self._evi_square()
+            self._color_square()
+            self._cloud_processing()
+            self._write_cloud_data()
             self._tmp_img_cleanup()
 
     def _find_files(self, safe_folder: str) -> dict:
@@ -55,17 +59,16 @@ class SentinelPass:
         for root, dirs, files in os.walk(f'../data/{safe_folder}'):
             for file in files:
                 if file.endswith("B02_10m.jp2"):
-                    band_dict['band02'] = os.path.join(root, file)
+                    self.band_dict['band02'] = os.path.join(root, file)
                     self.b2_fn = file # pulls filename rather than path for parsing datetime
                 elif file.endswith("B03_10m.jp2"):
-                    band_dict['band03'] = os.path.join(root, file)
+                    self.band_dict['band03'] = os.path.join(root, file)
                 elif file.endswith("B04_10m.jp2"):
-                    band_dict['band04'] = os.path.join(root, file)
+                    self.band_dict['band04'] = os.path.join(root, file)
                 elif file.endswith("B08_10m.jp2"):
-                    band_dict['band08'] = os.path.join(root, file)
+                    self.band_dict['band08'] = os.path.join(root, file)
                 elif file.endswith("PRB_20m.jp2"):
-                    band_dict['clouds'] = os.path.join(root, file)
-
+                    self.band_dict['clouds'] = os.path.join(root, file)
 
     def _pull_padded_box(self):
         """Pulls padded box info from the geojson file and sets attribute to an epsg:32616 geometry"""
@@ -77,33 +80,33 @@ class SentinelPass:
     def _reproject_wgs84(self, band, file_path):
         """Reprojects jp2 into WGS84 crs and writes as GeoTIFF prior to masking file"""
 
-            dst_crs = 'epsg:4326'
+        dst_crs = 'epsg:4326'
 
-            with rasterio.open(file_path, 'r') as src:
-                transform, width, height = calculate_default_transform(
-                    src.crs, dst_crs, src.width, src.height, *src.bounds)
-                kwargs = src.meta.copy()
-                kwargs.update({
-                    'crs': dst_crs,
-                    'transform': transform,
-                    'width': width,
-                    'height': height,
-                    'driver': 'GTiff'
-                })
+        with rasterio.open(file_path, 'r') as src:
+            transform, width, height = calculate_default_transform(
+                src.crs, dst_crs, src.width, src.height, *src.bounds)
+            kwargs = src.meta.copy()
+            kwargs.update({
+                'crs': dst_crs,
+                'transform': transform,
+                'width': width,
+                'height': height,
+                'driver': 'GTiff'
+            })
 
-                with rasterio.open(f'./tmp_img/{band}.tiff', 'w', **kwargs) as dst:
-                    reproject(source=rasterio.band(src, 1),
-                              destination=rasterio.band(dst, 1),
-                              src_transform=src.transform,
-                              src_crs=src.crs,
-                              dst_transform=transform,
-                              dst_crs=dst_crs,
-                              resampling=Resampling.nearest)
+            with rasterio.open(f'./tmp_img/{band}.tiff', 'w', **kwargs) as dst:
+                reproject(source=rasterio.band(src, 1),
+                          destination=rasterio.band(dst, 1),
+                          src_transform=src.transform,
+                          src_crs=src.crs,
+                          dst_transform=transform,
+                          dst_crs=dst_crs,
+                          resampling=Resampling.nearest)
 
     # TODO: Refactor for use of dictionary to track filenames through initialization
     def _ndvi_square(self):
         """parses the b4 and b8 data down to a simple square around the farm"""
-        with rasterio.open('./tmp_img/b4.tif', 'r') as b4:
+        with rasterio.open('./tmp_img/band04.tiff', 'r') as b4:
             b4_img, b4_transform = rasterio.mask.mask(b4, self.pad_geom.geometry, crop=True)
             b4_out_meta = b4.meta.copy()
             b4_out_meta.update({'driver': 'GTiff',
@@ -112,7 +115,7 @@ class SentinelPass:
                                 'transform': b4_transform})
             self.red = b4_img.astype(float)
 
-        with rasterio.open('./tmp_img/b8.tif', 'r') as b8:
+        with rasterio.open('./tmp_img/band08.tiff', 'r') as b8:
             b8_img, b8_transform = rasterio.mask.mask(b8, self.pad_geom.geometry, crop=True)
             self.nir = b8_img.astype(float)
 
@@ -120,13 +123,12 @@ class SentinelPass:
         self.ndvi = (self.nir - self.red) / (self.nir + self.red)
         b4_out_meta.update({'dtype': rasterio.float64})
 
-        self.ndvi_gtf_name = f"./pics/ndvi_{self.sense_date.strftime('%Y%m%d')}.tiff"
         with rasterio.open(self.ndvi_gtf_name, 'w', **b4_out_meta) as dest:
             dest.write(self.ndvi.astype(rasterio.float64))
 
     def _evi_square(self):
         """parses the b4, b8, and b2 into an EVI array around the farm"""
-        with rasterio.open('./tmp_img/b4.tif', 'r') as b4:
+        with rasterio.open('./tmp_img/band04.tiff', 'r') as b4:
             b4_img, b4_transform = rasterio.mask.mask(b4, self.pad_geom.geometry, crop=True)
             b4_out_meta = b4.meta.copy()
             b4_out_meta.update({'driver': 'GTiff',
@@ -135,34 +137,82 @@ class SentinelPass:
                                 'transform': b4_transform})
             self.red = b4_img.astype(float) / 10000
 
-        with rasterio.open('./tmp_img/b8.tif', 'r') as b8:
+        with rasterio.open('./tmp_img/band08.tiff', 'r') as b8:
             b8_img, b8_transform = rasterio.mask.mask(b8, self.pad_geom.geometry, crop=True)
             self.nir = b8_img.astype(float) / 10000
 
-        with rasterio.open('./tmp_img/b2.tif', 'r') as b2:
+        with rasterio.open('./tmp_img/band02.tiff', 'r') as b2:
             b2_img, b2_transform = rasterio.mask.mask(b2, self.pad_geom.geometry, crop=True)
             self.blue = b2_img.astype(float) / 10000
 
         self.evi = 2.5 * (self.nir - self.red) / ((self.nir + 6.0 * self.red - 7.5 * self.blue) + 1.0)
         b4_out_meta.update({'dtype': rasterio.float64})
 
-        self.evi_gtf_name = f"./pics/evi_{self.sense_date.strftime('%Y%m%d')}.tiff"
         with rasterio.open(self.evi_gtf_name, 'w', **b4_out_meta) as dest:
             dest.write(self.evi.astype(rasterio.float64))
+
+    def _color_square(self):
+        """parses the b2, b3, and b4 into an full color array around the farm"""
+        with rasterio.open('./tmp_img/band04.tiff', 'r') as b4:
+            b4_img, b4_transform = rasterio.mask.mask(b4, self.pad_geom.geometry, crop=True)
+            b4_out_meta = b4.meta.copy()
+            b4_out_meta.update({'driver': 'GTiff',
+                                'height': b4_img.shape[1],
+                                'width': b4_img.shape[2],
+                                'transform': b4_transform,
+                                'count': 3})
+            self.red = b4_img
+
+        with rasterio.open('./tmp_img/band03.tiff', 'r') as b3:
+            b3_img, _ = rasterio.mask.mask(b3, self.pad_geom.geometry, crop=True)
+            self.green = b3_img
+
+        with rasterio.open('./tmp_img/band02.tiff', 'r') as b2:
+            b2_img, _ = rasterio.mask.mask(b2, self.pad_geom.geometry, crop=True)
+            self.blue = b2_img
+
+        with rasterio.open(self.color_gtf_name, 'w', **b4_out_meta) as dest:
+            dest.write(b4_img[0], 1)
+            dest.write(b3_img[0], 2)
+            dest.write(b2_img[0], 3)
+
+    def _cloud_processing(self):
+        """Will process the cloud masking data to assess the likelihood of clouds"""
+        farm_mask = self._all_mask[self._all_mask.name == 'Farm boundary']
+
+        with rasterio.open('./tmp_img/clouds.tiff', 'r') as cloud:
+            cloud_data, _ = rasterio.mask.mask(cloud, farm_mask.geometry, crop=True, nodata=101)
+
+        cloud_data_mask = cloud_data < 101
+
+        cld_arr = cloud_data[cloud_data_mask] # apply mask to get 1D array for analysis
+
+        self.cloud_dict = {'max': int(np.max(cld_arr)),
+                           'num_cld_pixels': int(np.count_nonzero(cld_arr)),
+                           'pixels': int(np.size(cld_arr)),
+                           'median': int(np.median(cld_arr)),
+                           '25_percentile': int(np.percentile(cld_arr, 25)),
+                           '75_percentile': int(np.percentile(cld_arr, 75))}
 
     def _tmp_img_cleanup(self):
         """Deletes all Currently expedient hardcoded delete of """
         for fn in [x for x in os.listdir('./tmp_img/')]:
             os.remove(f'./tmp_img/{fn}')
 
-
     def _name_to_time(self, b2_name: str):
         split_name = b2_name.split('_')
         self.sense_date = dt.strptime(split_name[1], '%Y%m%dT%H%M%S')
+        self.ndvi_gtf_name = f"./pics/ndvi_{self.sense_date.strftime('%Y%m%d')}.tiff"
+        self.evi_gtf_name = f"./pics/evi_{self.sense_date.strftime('%Y%m%d')}.tiff"
+        self.color_gtf_name = f"./pics/color_{self.sense_date.strftime('%Y%m%d')}.tiff"
+
+    def _write_cloud_data(self):
+        with open(f"./stats/{self.sense_date.strftime('%Y%m%d')}_cloud.txt", "w") as outfile:
+            json.dump(self.cloud_dict, outfile)
 
     # TODO: Refactor to account for new naming convention for files
     def paddock_stats(self, paddock_name: str, index: str = 'ndvi') -> dict:
-        """accepts geodataframe for specific paddock and index ('ndvi' or 'evi') and computes statistics"""
+        """accepts geodataframe for specific paddock and index ('ndvi' or 'evi') and computes statistics, and rights"""
         all_geom = gpd.read_file('farm_simple.geojson')
         paddock_mask = all_geom[all_geom.name == paddock_name]
 
@@ -178,24 +228,31 @@ class SentinelPass:
             paddock_data, _ = rasterio.mask.mask(src,
                                          paddock_mask.geometry,
                                          crop=True,
-                                         nodata=0.0) # chose not to use all_touched=True option
-            paddock_mask_arr, _, _ = rasterio.mask.raster_geometry_mask(src,
-                                                                        paddock_mask.geometry,
-                                                                        crop=True) # chose not to use all_touched=True option
+                                         nodata=-2) # chose not to use all_touched=True option
 
-        x = np.ma.array(paddock_data[0], mask=paddock_mask_arr)
-        xnan = np.ma.filled(x, np.nan)
+        data_mask = paddock_data >= -1
+        simple_data = paddock_data[data_mask]
 
         pdk_data_dict = {'index': index,
                          paddock_name: {
-                             'max': np.nanmax(xnan),
-                             'min': np.nanmin(xnan),
-                             'mean': np.nanmean(xnan),
-                             'median': np.nanmedian(xnan),
-                             'std': np.nanstd(xnan),
-                             'var': np.nanvar(xnan),
-                             'pixels': np.count_nonzero(paddock_data)
+                             'max': np.max(simple_data),
+                             'min': np.min(simple_data),
+                             'mean': np.mean(simple_data),
+                             'median': np.median(simple_data),
+                             'std': np.std(simple_data),
+                             'var': np.var(simple_data),
+                             'pixels': np.size(simple_data),
+                             '25_percent': np.percentile(simple_data, 25),
+                             '50_percent': np.percentile(simple_data, 50),
+                             '75_percent': np.percentile(simple_data, 75),
                              }}
+
+        for k, v in pdk_data_dict[paddock_name].items():
+            pdk_data_dict[paddock_name].update({k: float(v)})
+
+        with open(f"./stats/{self.sense_date.strftime('%Y%m%d')}_{paddock_name}_{index}.txt", "w") as outfile:
+            json.dump(pdk_data_dict, outfile)
+
         return pdk_data_dict
 
     def available_paddocks(self):
@@ -247,7 +304,7 @@ class SentinelPass:
         ax.margins(0)
         fig.add_axes(ax)
 
-        ax.imshow(img_norm, cmap=mymap)
+        ax.imshow(img_norm, cmap='RdYlGn')
         plt.savefig(f"./pics/{index.lower()}_{self.sense_date.strftime('%Y%m%d')}.png", transparent=True)
         plt.close()
 
@@ -259,3 +316,4 @@ class SentinelPass:
     # TODO: add NDVI data to database
 
     # TODO: write PNG into KML and return
+
