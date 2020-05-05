@@ -59,7 +59,8 @@ def get_data():
                          area_relation='Contains',
                          date=('20200401', '20200419'),
                          platformname='Sentinel-2',
-                         processinglevel='Level-2A')
+                         processinglevel='Level-2A',
+                         cloudcoverpercentage=(0, 75))
 
     # find most recent product - not currently doing anything
     products_gdf = api.to_geodataframe(products)

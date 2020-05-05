@@ -47,7 +47,7 @@ class SentinelPass:
             self._tmp_img_cleanup()
 
     def _find_files(self, safe_folder: str) -> dict:
-        """Accepts the base path for a set of download files and returns dictionary with file paths for multiple items"""
+        """Accepts the base path for a set of download files and populates a dictionary with file paths for multiple items"""
         self.band_dict = {
             'band02': '',
             'band03': '',

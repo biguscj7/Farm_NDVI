@@ -9,7 +9,7 @@ with open('./stats/20200420_Farm boundary_evi.txt', 'r') as infile:
 with open('./stats/20200425_Farm boundary_evi.txt', 'r') as infile:
     total_clouds = json.load(infile)
 
-with open('evi_comparison.txt', 'w') as format_data:
+with open('stats/evi_comparison.txt', 'w') as format_data:
     format_data.write(f"{'Name':>10}{'Clear':^15}{'Partly cloudy':^15}{'Overcast':^15}\n")
 
     for k, _ in clear_sky['Farm boundary'].items():
