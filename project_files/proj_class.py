@@ -252,6 +252,7 @@ class SentinelPass:
         for k, v in pdk_data_dict[paddock_name].items():
             pdk_data_dict[paddock_name].update({k: float(v)})
 
+        # TODO: Consider refactoring paddock names to remove white space
         with open(f"./stats/{self.farm}/{self.sense_date.strftime('%Y%m%d')}_{paddock_name}_{index}.json", "w") as outfile:
             json.dump(pdk_data_dict, outfile)
 
