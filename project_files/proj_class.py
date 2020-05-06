@@ -29,21 +29,25 @@ import json
 
 class SentinelPass:
     def __init__(self, safe_path: str,
-                 gjson_path: str):
+                 farm: str):
         """Initializes class with the Sentinel SAFE folder path and GeoJSON path"""
         self.safe_path = safe_path
         self._find_files(self.safe_path)
+        self.farm = farm
         self._name_to_time(self.b2_fn)
-        self._all_mask = gpd.read_file(gjson_path)
+        if self.farm == 'votm':
+            self._all_mask = gpd.read_file('./KMZs/votm/farm_simple.geojson')
+        else:
+            self._all_mask = gpd.read_file('./KMZs/brass/brass_farm.geojson')
         self._pull_padded_box()
-        if f"ndvi_{self.sense_date.strftime('%Y%m%d')}.tiff" not in os.listdir('./pics/'):
+        if f"ndvi_{self.sense_date.strftime('%Y%m%d')}.tiff" not in os.listdir(f'./geotiffs/{farm}/'):
             for k, v in self.band_dict.items():
                 self._reproject_wgs84(k, v)
             self._ndvi_square()
             self._evi_square()
             self._color_square()
             self._cloud_processing()
-            self._write_cloud_data()
+            self._write_cloud_stats()
             self._tmp_img_cleanup()
 
     def _find_files(self, safe_folder: str) -> dict:
@@ -71,10 +75,8 @@ class SentinelPass:
                     self.band_dict['clouds'] = os.path.join(root, file)
 
     def _pull_padded_box(self):
-        """Pulls padded box info from the geojson file and sets attribute to an epsg:32616 geometry"""
-        self.pad_geom = self._all_mask[
-            self._all_mask.name == 'Padded box']  # access the geometry that's a box padded around the farm
-        #self.pad_geom_m = pad_geom.to_crs('epsg:32616')  # convert this geometry to the frame for
+        """Pulls padded box info from the geojson file"""
+        self.pad_geom = self._all_mask[self._all_mask.name == f'{self.farm} farm padded']
 
     # TODO: Implement delete of data file once bands have been pulled
     def _reproject_wgs84(self, band, file_path):
@@ -178,7 +180,7 @@ class SentinelPass:
 
     def _cloud_processing(self):
         """Will process the cloud masking data to assess the likelihood of clouds"""
-        farm_mask = self._all_mask[self._all_mask.name == 'Farm boundary']
+        farm_mask = self._all_mask[self._all_mask.name == f'{self.farm} farm padded']
 
         with rasterio.open('./tmp_img/clouds.tiff', 'r') as cloud:
             cloud_data, _ = rasterio.mask.mask(cloud, farm_mask.geometry, crop=True, nodata=101)
@@ -192,6 +194,7 @@ class SentinelPass:
                            'pixels': int(np.size(cld_arr)),
                            'median': int(np.median(cld_arr)),
                            '25_percentile': int(np.percentile(cld_arr, 25)),
+                           '50_percentile': int(np.percentile(cld_arr, 50)),
                            '75_percentile': int(np.percentile(cld_arr, 75))}
 
     def _tmp_img_cleanup(self):
@@ -202,24 +205,23 @@ class SentinelPass:
     def _name_to_time(self, b2_name: str):
         split_name = b2_name.split('_')
         self.sense_date = dt.strptime(split_name[1], '%Y%m%dT%H%M%S')
-        self.ndvi_gtf_name = f"./pics/ndvi_{self.sense_date.strftime('%Y%m%d')}.tiff"
-        self.evi_gtf_name = f"./pics/evi_{self.sense_date.strftime('%Y%m%d')}.tiff"
-        self.color_gtf_name = f"./pics/color_{self.sense_date.strftime('%Y%m%d')}.tiff"
+        self.ndvi_gtf_name = f"./geotiffs/{self.farm}/ndvi_{self.sense_date.strftime('%Y%m%d')}.tiff"
+        self.evi_gtf_name = f"./geotiffs/{self.farm}/evi_{self.sense_date.strftime('%Y%m%d')}.tiff"
+        self.color_gtf_name = f"./geotiffs/{self.farm}/color_{self.sense_date.strftime('%Y%m%d')}.tiff"
 
-    def _write_cloud_data(self):
-        with open(f"./stats/{self.sense_date.strftime('%Y%m%d')}_cloud.txt", "w") as outfile:
+    def _write_cloud_stats(self):
+        with open(f"./stats/{self.farm}/{self.sense_date.strftime('%Y%m%d')}_cloud.json", "w") as outfile:
             json.dump(self.cloud_dict, outfile)
 
     # TODO: Refactor to account for new naming convention for files
-    def paddock_stats(self, paddock_name: str, index: str = 'ndvi') -> dict:
-        """accepts geodataframe for specific paddock and index ('ndvi' or 'evi') and computes statistics, and rights"""
-        all_geom = gpd.read_file('farm_simple.geojson')
-        paddock_mask = all_geom[all_geom.name == paddock_name]
+    def paddock_stats(self, index: str = 'ndvi', paddock_name: str = 'Farm boundary') -> dict:
+        """accepts geodataframe for specific paddock and index ('ndvi' or 'evi') and computes statistics, and writes"""
+        paddock_mask = self._all_mask[self._all_mask.name == paddock_name]
 
         if index.lower() == 'evi':
-            index_path = f"./pics/evi_{self.sense_date.strftime('%Y%m%d')}.tiff"
+            index_path = f"./geotiffs/{self.farm}/evi_{self.sense_date.strftime('%Y%m%d')}.tiff"
         elif index.lower() == 'ndvi':
-            index_path = f"./pics/ndvi_{self.sense_date.strftime('%Y%m%d')}.tiff"
+            index_path = f"./geotiffs/{self.farm}/ndvi_{self.sense_date.strftime('%Y%m%d')}.tiff"
         else:
             print('Invalid index chosen. Chose either "evi" or "ndvi"')
             return {'result': 'Invalid index parameter provided'}
@@ -250,10 +252,10 @@ class SentinelPass:
         for k, v in pdk_data_dict[paddock_name].items():
             pdk_data_dict[paddock_name].update({k: float(v)})
 
-        with open(f"./stats/{self.sense_date.strftime('%Y%m%d')}_{paddock_name}_{index}.txt", "w") as outfile:
+        with open(f"./stats/{self.farm}/{self.sense_date.strftime('%Y%m%d')}_{paddock_name}_{index}.json", "w") as outfile:
             json.dump(pdk_data_dict, outfile)
 
-        return pdk_data_dict
+        return pdk_data_dict # kind of a waste to write and return as well, for development only
 
     def available_paddocks(self):
         """Processes the GeoJSON path in use by the instance and returns a list of names"""
@@ -305,7 +307,7 @@ class SentinelPass:
         fig.add_axes(ax)
 
         ax.imshow(img_norm, cmap='RdYlGn')
-        plt.savefig(f"./pics/{index.lower()}_{self.sense_date.strftime('%Y%m%d')}.png", transparent=True)
+        plt.savefig(f"./pics/{self.farm}/{index.lower()}_{self.sense_date.strftime('%Y%m%d')}.png", transparent=True)
         plt.close()
 
     # TODO: Function to implement logic checking for clouds in FOV - seems like some non-visible clouds affect indices

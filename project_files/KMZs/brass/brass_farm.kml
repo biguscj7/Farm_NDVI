@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2" xmlns:gx="http://www.google.com/kml/ext/2.2" xmlns:kml="http://www.opengis.net/kml/2.2" xmlns:atom="http://www.w3.org/2005/Atom">
+<Document>
+	<name>brass farm.kml</name>
+	<Style id="s_ylw-pushpin_hl">
+		<IconStyle>
+			<scale>1.3</scale>
+			<Icon>
+				<href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
+			</Icon>
+			<hotSpot x="20" y="2" xunits="pixels" yunits="pixels"/>
+		</IconStyle>
+	</Style>
+	<StyleMap id="m_ylw-pushpin">
+		<Pair>
+			<key>normal</key>
+			<styleUrl>#s_ylw-pushpin</styleUrl>
+		</Pair>
+		<Pair>
+			<key>highlight</key>
+			<styleUrl>#s_ylw-pushpin_hl</styleUrl>
+		</Pair>
+	</StyleMap>
+	<Style id="s_ylw-pushpin">
+		<IconStyle>
+			<scale>1.1</scale>
+			<Icon>
+				<href>http://maps.google.com/mapfiles/kml/pushpin/ylw-pushpin.png</href>
+			</Icon>
+			<hotSpot x="20" y="2" xunits="pixels" yunits="pixels"/>
+		</IconStyle>
+	</Style>
+	<Folder>
+		<name>brass farm</name>
+		<open>1</open>
+		<Placemark>
+			<name>close outline</name>
+			<visibility>0</visibility>
+			<styleUrl>#m_ylw-pushpin</styleUrl>
+			<Polygon>
+				<tessellate>1</tessellate>
+				<outerBoundaryIs>
+					<LinearRing>
+						<coordinates>
+							-89.18641161234056,42.14784806341878,0 -89.18246865452299,42.14782254125392,0 -89.18241673811235,42.14877369305658,0 -89.18069012824495,42.148789465909,0 -89.17987484383941,42.14844427906948,0 -89.17942405777278,42.14857751321054,0 -89.17902639242101,42.14864435811173,0 -89.17853764175331,42.14868472769178,0 -89.17822879818958,42.1488587485784,0 -89.17819149566249,42.14909979065951,0 -89.17829933379944,42.14940887153586,0 -89.178607955982,42.14977399666061,0 -89.17911970612639,42.15028886081362,0 -89.17924984520413,42.15113710403463,0 -89.17983777781473,42.15113422320098,0 -89.18024224283249,42.15122854648803,0 -89.18018956452033,42.15158557177818,0 -89.18010007622962,42.15183676702433,0 -89.17912208903184,42.15171884521494,0 -89.179012125561,42.1526144683758,0 -89.18244960526559,42.15284294769091,0 -89.18247233237686,42.14960220840008,0 -89.18643893501883,42.14941059548655,0 -89.18641161234056,42.14784806341878,0 
+						</coordinates>
+					</LinearRing>
+				</outerBoundaryIs>
+			</Polygon>
+		</Placemark>
+		<Placemark>
+			<name>Brass farm padded</name>
+			<styleUrl>#m_ylw-pushpin</styleUrl>
+			<Polygon>
+				<tessellate>1</tessellate>
+				<outerBoundaryIs>
+					<LinearRing>
+						<coordinates>
+							-89.19334822086886,42.14374704840682,0 -89.17174316923538,42.14375495787046,0 -89.17177837867132,42.16073469197504,0 -89.19400298257145,42.16064038933739,0 -89.19334822086886,42.14374704840682,0 
+						</coordinates>
+					</LinearRing>
+				</outerBoundaryIs>
+			</Polygon>
+		</Placemark>
+	</Folder>
+</Document>
+</kml>

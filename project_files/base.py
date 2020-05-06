@@ -17,6 +17,14 @@ Use the gml_transform script as a basis for assessing the downloaded jp2 for clo
 
 --------------------------------------------------------------------------------------------------------
 Structure:
+- proj_class.py
+-- Holds the SentinelPass class used to process downloaded imagery
+-- Produces text files / images from the results of a pass
+
+
+
+
+
 - queep.py
 -- used for various admin tasks (likely not repeatable) in standing up this app
 TODO:

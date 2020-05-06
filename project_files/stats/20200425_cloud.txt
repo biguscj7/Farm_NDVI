@@ -1,1 +1,0 @@
-{"max": 0, "num_cld_pixels": 0, "pixels": 568, "median": 0, "25_percentile": 0, "75_percentile": 0}
