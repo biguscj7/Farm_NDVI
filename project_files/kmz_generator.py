@@ -25,10 +25,10 @@ brass_bounds = {
 
 # add new icon to kml file
 # TODO: include ability to generate kmls for votm as well (need new lat/lon box)
-def add_groundoverlay(str_date, fn, stats_dict, farm):
+def add_groundoverlay(str_date, veg_index, stats_dict, fn, farm):
     '''This function adds a new overlay section to the kml file'''
     ground = kml.newgroundoverlay(name=str_date,
-                                  description=f'NDVI stats:\nMean - {stats_dict["Farm boundary"]["mean"]:.3f}\nMedian - {stats_dict["Farm boundary"]["median"]:.3f}\nMin - {stats_dict["Farm boundary"]["min"]:.3f}\nMax - {stats_dict["Farm boundary"]["max"]:.3f}')
+                                  description=f'{veg_index.upper()} stats:\nMean - {stats_dict["Farm boundary"]["mean"]:.3f}\nMedian - {stats_dict["Farm boundary"]["median"]:.3f}\nMin - {stats_dict["Farm boundary"]["min"]:.3f}\nMax - {stats_dict["Farm boundary"]["max"]:.3f}')
     ground.icon.href = f"files/{fn}"
     ground.icon.viewboundscale = 0.75
     if farm == 'votm':
@@ -89,20 +89,20 @@ def get_index():
 
 if __name__ == '__main__':
     farm = get_farm()
-    index = get_index()
+    veg_index = get_index()
     kml = simplekml.Kml()
-    kml_pics = [x for x in os.listdir(f'./pics/{farm}/') if x[0:3] == f'{index[0:3]}']
+    kml_pics = [x for x in os.listdir(f'./pics/{farm}/') if x[0:3] == f'{veg_index[0:3]}']
     kml_pics.sort()
     for fn in kml_pics:
         date_data = fn.split('_')[1][0:8]
         num_date = dt.strptime(date_data, "%Y%m%d")
         ltr_date = num_date.strftime("%b %-d, %Y")
-        stats = get_stats(farm, index, date_data)
-        add_groundoverlay(ltr_date, fn, stats, farm)
-    kml.save(f'./KMZs/{farm}_{index}.kml')
-    zip_kmz(farm, index, kml_pics)
-    if os.path.exists(f'./KMZs/{farm.title()}_{index.upper()}.kml'):
-        os.remove(f'./KMZs/{farm.title()}_{index.upper()}.kml')
+        stats = get_stats(farm, veg_index, date_data)
+        add_groundoverlay(ltr_date, veg_index, stats, fn, farm)
+    kml.save(f'./KMZs/{farm}_{veg_index}.kml')
+    zip_kmz(farm, veg_index, kml_pics)
+    if os.path.exists(f'./KMZs/{farm.title()}_{veg_index.upper()}.kml'):
+        os.remove(f'./KMZs/{farm.title()}_{veg_index.upper()}.kml')
 
 
 
