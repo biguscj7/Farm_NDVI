@@ -11,6 +11,7 @@ Process single satellite pass into NDVI/EVI stats/info for each paddock individu
 Follow-on capes:
 Create KML with paddock data embedded.
 Put results in database.
+Auto generate the stats for each paddock in the base GeoJSON and return a pandas dataframe
 '''
 
 import rasterio
@@ -40,7 +41,7 @@ class SentinelPass:
         else:
             self._all_mask = gpd.read_file('./KMZs/brass/brass_farm.geojson')
         self._pull_padded_box()
-        if f"ndvi_{self.sense_date.strftime('%Y%m%d')}.tiff" not in os.listdir(f'./geotiffs/{farm}/'):
+        if f"ndvi_{self.sense_datetime.strftime('%Y%m%d')}.tiff" not in os.listdir(f'./geotiffs/{farm}/'):
             for k, v in self.band_dict.items():
                 self._reproject_wgs84(k, v)
             self._ndvi_square()
@@ -204,13 +205,13 @@ class SentinelPass:
 
     def _name_to_time(self, b2_name: str):
         split_name = b2_name.split('_')
-        self.sense_date = dt.strptime(split_name[1], '%Y%m%dT%H%M%S')
-        self.ndvi_gtf_name = f"./geotiffs/{self.farm}/ndvi_{self.sense_date.strftime('%Y%m%d')}.tiff"
-        self.evi_gtf_name = f"./geotiffs/{self.farm}/evi_{self.sense_date.strftime('%Y%m%d')}.tiff"
-        self.color_gtf_name = f"./geotiffs/{self.farm}/color_{self.sense_date.strftime('%Y%m%d')}.tiff"
+        self.sense_datetime = dt.strptime(split_name[1], '%Y%m%dT%H%M%S')
+        self.ndvi_gtf_name = f"./geotiffs/{self.farm}/ndvi_{self.sense_datetime.strftime('%Y%m%d')}.tiff"
+        self.evi_gtf_name = f"./geotiffs/{self.farm}/evi_{self.sense_datetime.strftime('%Y%m%d')}.tiff"
+        self.color_gtf_name = f"./geotiffs/{self.farm}/color_{self.sense_datetime.strftime('%Y%m%d')}.tiff"
 
     def _write_cloud_stats(self):
-        with open(f"./stats/{self.farm}/{self.sense_date.strftime('%Y%m%d')}_cloud.json", "w") as outfile:
+        with open(f"./stats/{self.farm}/{self.sense_datetime.strftime('%Y%m%d')}_cloud.json", "w") as outfile:
             json.dump(self.cloud_dict, outfile)
 
     # TODO: Refactor to account for new naming convention for files
@@ -219,9 +220,9 @@ class SentinelPass:
         paddock_mask = self._all_mask[self._all_mask.name == paddock_name]
 
         if index.lower() == 'evi':
-            index_path = f"./geotiffs/{self.farm}/evi_{self.sense_date.strftime('%Y%m%d')}.tiff"
+            index_path = f"./geotiffs/{self.farm}/evi_{self.sense_datetime.strftime('%Y%m%d')}.tiff"
         elif index.lower() == 'ndvi':
-            index_path = f"./geotiffs/{self.farm}/ndvi_{self.sense_date.strftime('%Y%m%d')}.tiff"
+            index_path = f"./geotiffs/{self.farm}/ndvi_{self.sense_datetime.strftime('%Y%m%d')}.tiff"
         else:
             print('Invalid index chosen. Chose either "evi" or "ndvi"')
             return {'result': 'Invalid index parameter provided'}
@@ -253,7 +254,7 @@ class SentinelPass:
             pdk_data_dict[paddock_name].update({k: float(v)})
 
         # TODO: Consider refactoring paddock names to remove white space
-        with open(f"./stats/{self.farm}/{self.sense_date.strftime('%Y%m%d')}_{paddock_name}_{index}.json", "w") as outfile:
+        with open(f"./stats/{self.farm}/{self.sense_datetime.strftime('%Y%m%d')}_{paddock_name}_{index}.json", "w") as outfile:
             json.dump(pdk_data_dict, outfile)
 
         return pdk_data_dict # kind of a waste to write and return as well, for development only
@@ -308,7 +309,7 @@ class SentinelPass:
         fig.add_axes(ax)
 
         ax.imshow(img_norm, cmap='RdYlGn')
-        plt.savefig(f"./pics/{self.farm}/{index.lower()}_{self.sense_date.strftime('%Y%m%d')}.png", transparent=True)
+        plt.savefig(f"./pics/{self.farm}/{index.lower()}_{self.sense_datetime.strftime('%Y%m%d')}.png", transparent=True)
         plt.close()
 
     # TODO: Function to implement logic checking for clouds in FOV - seems like some non-visible clouds affect indices
