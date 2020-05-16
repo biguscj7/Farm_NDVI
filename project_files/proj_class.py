@@ -19,6 +19,7 @@ import rasterio.mask
 from rasterio.warp import calculate_default_transform, reproject, Resampling
 import geopandas as gpd
 import numpy as np
+import pandas as pd
 from pprint import pprint as pp
 import os
 from datetime import datetime as dt
@@ -214,7 +215,7 @@ class SentinelPass:
         with open(f"./stats/{self.farm}/{self.sense_datetime.strftime('%Y%m%d')}_cloud.json", "w") as outfile:
             json.dump(self.cloud_dict, outfile)
 
-    # TODO: Refactor to account for new naming convention for files
+    # TODO: Refactor to accept either a string for a single paddock or a list for multiple and return a DataFrame
     def paddock_stats(self, index: str = 'ndvi', paddock_name: str = 'Farm boundary') -> dict:
         """accepts geodataframe for specific paddock and index ('ndvi' or 'evi') and computes statistics, and writes"""
         paddock_mask = self._all_mask[self._all_mask.name == paddock_name]
@@ -236,22 +237,20 @@ class SentinelPass:
         data_mask = paddock_data >= -1
         simple_data = paddock_data[data_mask]
 
-        pdk_data_dict = {'index': index,
-                         paddock_name: {
-                             'max': np.max(simple_data),
-                             'min': np.min(simple_data),
-                             'mean': np.mean(simple_data),
-                             'median': np.median(simple_data),
-                             'std': np.std(simple_data),
-                             'var': np.var(simple_data),
-                             'pixels': np.size(simple_data),
-                             '25_percent': np.percentile(simple_data, 25),
-                             '50_percent': np.percentile(simple_data, 50),
-                             '75_percent': np.percentile(simple_data, 75),
-                             }}
+        pdk_data_dict = {paddock_name:{
+                         'max': np.max(simple_data),
+                         'min': np.min(simple_data),
+                         'mean': np.mean(simple_data),
+                         'median': np.median(simple_data),
+                         'std': np.std(simple_data),
+                         'var': np.var(simple_data),
+                         'pixels': np.size(simple_data),
+                         '25_percent': np.percentile(simple_data, 25),
+                         '50_percent': np.percentile(simple_data, 50),
+                         '75_percent': np.percentile(simple_data, 75)}}
 
-        for k, v in pdk_data_dict[paddock_name].items():
-            pdk_data_dict[paddock_name].update({k: float(v)})
+        #for k, v in pdk_data_dict[paddock_name].items():
+            #pdk_data_dict[paddock_name].update({k: float(v)})
 
         # TODO: Consider refactoring paddock names to remove white space
         with open(f"./stats/{self.farm}/{self.sense_datetime.strftime('%Y%m%d')}_{paddock_name}_{index}.json", "w") as outfile:
