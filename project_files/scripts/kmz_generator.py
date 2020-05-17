@@ -45,21 +45,21 @@ def add_groundoverlay(str_date, veg_index, stats_dict, fn, farm):
 # build folder
 def build_dir():
     '''Creates the kmz_dir and subdirectory files in the current working dir'''
-    os.mkdir('./KMZs/kmz_dir/')
-    os.mkdir('./KMZs/kmz_dir/files')
+    os.mkdir('../KMZs/kmz_dir/')
+    os.mkdir('../KMZs/kmz_dir/files')
 
 # tear down folder
 def rm_dir():
     '''Removes (recursively) the kmz_dir'''
-    os.rmdir('./KMZs/kmz_dir')
+    os.rmdir('../KMZs/kmz_dir')
 
 # zip folder as 'kmz'
 def zip_kmz(farm, index, pic_list):
     '''Zips the file directory with the kml into a KMZ file'''
     zipf = zipfile.ZipFile(f'./KMZs/{farm.title()}_{index.upper()}.kmz', 'w', zipfile.ZIP_DEFLATED)
-    zipf.write(f'./KMZs/{farm}_{index}.kml', arcname=f'./{farm}_{index}.kml')
+    zipf.write(f'../KMZs/{farm}_{index}.kml', arcname=f'./{farm}_{index}.kml')
     for g in pic_list:
-        zipf.write(f'./pics/{farm}/{g}', arcname=f'./files/{g}')
+        zipf.write(f'../pics/{farm}/{g}', arcname=f'./files/{g}')
     zipf.close()
 
 
@@ -68,14 +68,14 @@ def clean_folder():
     '''Removes the kml file as well as files directory'''
     if os.path.exists('groundoverlay.kml'):
         os.remove('groundoverlay.kml')
-    filelist = [f for f in os.listdir('./KMZs/kmz_dir/files') if f.endswith('.png')]
+    filelist = [f for f in os.listdir('../KMZs/kmz_dir/files') if f.endswith('.png')]
     for g in filelist:
         os.remove(os.path.join('files', g))
 
 
 def get_stats(farm, index, dt_data):
     '''Receives url and returns dictionary of stats for polygon'''
-    with open(f'./stats/{farm}/{dt_data}_Farm boundary_{index}.json', 'r') as data_file:
+    with open(f'../stats/{farm}/{dt_data}_Farm boundary_{index}.json', 'r') as data_file:
         return json.load(data_file)
 
 def get_farm():
@@ -91,7 +91,7 @@ if __name__ == '__main__':
     farm = get_farm()
     veg_index = get_index()
     kml = simplekml.Kml()
-    kml_pics = [x for x in os.listdir(f'./pics/{farm}/') if x[0:3] == f'{veg_index[0:3]}']
+    kml_pics = [x for x in os.listdir(f'../pics/{farm}/') if x[0:3] == f'{veg_index[0:3]}']
     kml_pics.sort()
     for fn in kml_pics:
         date_data = fn.split('_')[1][0:8]
@@ -99,10 +99,10 @@ if __name__ == '__main__':
         ltr_date = num_date.strftime("%b %-d, %Y")
         stats = get_stats(farm, veg_index, date_data)
         add_groundoverlay(ltr_date, veg_index, stats, fn, farm)
-    kml.save(f'./KMZs/{farm}_{veg_index}.kml')
+    kml.save(f'../KMZs/{farm}_{veg_index}.kml')
     zip_kmz(farm, veg_index, kml_pics)
-    if os.path.exists(f'./KMZs/{farm.title()}_{veg_index.upper()}.kml'):
-        os.remove(f'./KMZs/{farm.title()}_{veg_index.upper()}.kml')
+    if os.path.exists(f'../KMZs/{farm.title()}_{veg_index.upper()}.kml'):
+        os.remove(f'../KMZs/{farm.title()}_{veg_index.upper()}.kml')
 
 
 

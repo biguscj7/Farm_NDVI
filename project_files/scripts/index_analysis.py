@@ -5,9 +5,9 @@ from pprint import pprint as pp
 
 def build_master_dict(index):
     index_dict = {'index': index}
-    for fn in os.listdir('./stats/brass/'):
+    for fn in os.listdir('../stats/brass/'):
         if fn.endswith(f'{index_dict["index"]}.json'):
-            with open(f'./stats/brass/{fn}', 'r') as infile:
+            with open(f'../stats/brass/{fn}', 'r') as infile:
                 index_data = json.load(infile)
                 index_date = fn.split('_')[0]
             index_dict.update({index_date: index_data})
@@ -33,7 +33,7 @@ if __name__ == '__main__':
     cloudy_dict = average_dicts(['20200420', '20200503'], index_dict)
     ovc_dict = average_dicts(['20200425', '20200428'], index_dict)
 
-    with open('../project_files/stats/evi_comparison.txt', 'w') as format_data:
+    with open('../stats/evi_comparison.txt', 'w') as format_data:
         format_data.write(f"{'Name':>10}{'Clear':^15}{'Partly cloudy':^15}{'Overcast':^15}\n")
         format_data.write(f"{'Max:':>10}{clear_dict['ave_max']:^15.3f}{cloudy_dict['ave_max']:^15.3f}{ovc_dict['ave_max']:^15.3f}\n")
         format_data.write(f"{'Mean:':>10}{clear_dict['ave_mean']:^15.3f}{cloudy_dict['ave_mean']:^15.3f}{ovc_dict['ave_mean']:^15.3f}\n")
