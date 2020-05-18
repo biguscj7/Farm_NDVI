@@ -7,3 +7,5 @@ def geojson_simplify(in_file, out_file):
     farm_simp = farm[['name', 'geometry']]
     farm_simp.to_file(out_file, driver='GeoJSON')
 
+if __name__ == '__main__':
+    geojson_simplify('./KMZs/votm/farm.geojson', './KMZs/votm/farm_simple.geojson')
