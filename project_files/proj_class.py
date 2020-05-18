@@ -38,7 +38,7 @@ class SentinelPass:
         self.farm = farm
         self._name_to_time(self.b2_fn)
         if self.farm == 'votm':
-            self._all_mask = gpd.read_file('./KMZs/votm/farm_simple.geojson')
+            self._all_mask = gpd.read_file('KMZs/votm/farm_simple')
         else:
             self._all_mask = gpd.read_file('./KMZs/brass/brass_farm.geojson')
         self._pull_padded_box()

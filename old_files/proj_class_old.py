@@ -110,7 +110,7 @@ class SentinelPass:
     def _paddock_mask(self, paddock_name: str):
         """Accepts paddock name and returns the UTM converted mask, epsg:32616"""
         # use gpd function '.to_crs('epsg:32616') to change the polygon to jp2 frame
-        all_geom = gpd.read_file('../project_files/KMZs/votm/farm_simple.geojson')
+        all_geom = gpd.read_file('../project_files/KMZs/votm/farm_simple')
         paddock_geom = all_geom[all_geom.name == paddock_name]
         return paddock_geom.to_crs('epsg:32616')
 
