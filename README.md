@@ -24,3 +24,10 @@ Graphs / charts and other non-imagery based products to enable assessment.
 ## Database
 In work
 
+## Thoughts for continued work
+- Graph info from sentinelapi query for date & clouds
+- Automate download/unzip/processing of files
+- Decide on what data to retain
+- Implement processing on the c440 machine
+- Update the c440 machine to Ubuntu 20
+

@@ -8,4 +8,4 @@ def geojson_simplify(in_file, out_file):
     farm_simp.to_file(out_file, driver='GeoJSON')
 
 if __name__ == '__main__':
-    geojson_simplify('./KMZs/votm/farm.geojson', './KMZs/votm/farm_simple.geojson')
+    geojson_simplify('./KMZs/votm/Farm_boundary.geojson', './KMZs/votm/Farm_boundary.geojson')
