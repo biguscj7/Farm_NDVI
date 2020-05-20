@@ -31,14 +31,14 @@ import json
 
 class SentinelPass:
     def __init__(self, safe_path: str,
-                 farm: str):
+                 farm: str = 'votm'):
         """Initializes class with the Sentinel SAFE folder path and GeoJSON path"""
         self.safe_path = safe_path
         self._find_files(self.safe_path)
         self.farm = farm
         self._name_to_time(self.b2_fn)
         if self.farm == 'votm':
-            self._all_mask = gpd.read_file('KMZs/votm/farm_simple')
+            self._all_mask = gpd.read_file('KMZs/votm/farm_simple.geojson')
         else:
             self._all_mask = gpd.read_file('./KMZs/brass/brass_farm.geojson')
         self._pull_padded_box()
