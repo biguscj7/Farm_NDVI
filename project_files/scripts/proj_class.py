@@ -30,19 +30,19 @@ import json
 
 
 class SentinelPass:
-    def __init__(self, safe_path: str,
+    def __init__(self, safe_folder: str,
                  farm: str = 'votm'):
         """Initializes class with the Sentinel SAFE folder path and GeoJSON path"""
-        self.safe_path = safe_path
-        self._find_files(self.safe_path)
+        self.safe_folder = safe_folder
+        self._find_files(self.safe_folder)
         self.farm = farm
         self._name_to_time(self.b2_fn)
         if self.farm == 'votm':
-            self._all_mask = gpd.read_file('KMZs/votm/farm_simple.geojson')
+            self._all_mask = gpd.read_file('./KMZs/votm/farm_simple.geojson')
         else:
             self._all_mask = gpd.read_file('./KMZs/brass/brass_farm.geojson')
         self._pull_padded_box()
-        if f"ndvi_{self.sense_datetime.strftime('%Y%m%d')}.tiff" not in os.listdir(f'./geotiffs/{farm}/'):
+        if f"ndvi_{self.sense_datetime.strftime('%Y%m%dT%H%M')}.tiff" not in os.listdir(f'./geotiffs/{farm}/'):
             for k, v in self.band_dict.items():
                 self._reproject_wgs84(k, v)
             self._ndvi_square()
@@ -51,6 +51,7 @@ class SentinelPass:
             self._color_square()
             self._cloud_processing()
             self._tmp_img_cleanup()
+            self._safe_folder_move()
 
     def _find_files(self, safe_folder: str) -> dict:
         """Accepts the base path for a set of download files and populates a dictionary with file paths for multiple items"""
@@ -64,7 +65,7 @@ class SentinelPass:
             'clouds': ''
         }
 
-        for root, dirs, files in os.walk(f'../data/{safe_folder}'):
+        for root, dirs, files in os.walk(f'/Volumes/BIGUS_Storage/SAFE data/Unprocessed folders/{safe_folder}'):
             for file in files:
                 if file.endswith("B02_10m.jp2"):
                     self.band_dict['band02'] = os.path.join(root, file)
@@ -227,7 +228,7 @@ class SentinelPass:
                                 '50_percentile': int(np.percentile(cld_arr, 50)),
                                 '75_percentile': int(np.percentile(cld_arr, 75))}, index=['clouds'])
 
-        cloud_df.to_csv(f"./stats/{self.farm}/{self.sense_datetime.strftime('%Y%m%d')}_cloud.csv")
+        cloud_df.to_csv(f"./stats/{self.farm}/cloud_{self.sense_datetime.strftime('%Y%m%dT%H%M')}.csv")
 
     def _compute_pdk_stats(self, src_file, pdk_name):
         """Function uses a geotiff file object and specific paddock to compute stats and returns a DataFrame"""
@@ -256,25 +257,30 @@ class SentinelPass:
     def _name_to_time(self, b2_name: str):
         split_name = b2_name.split('_')
         self.sense_datetime = dt.strptime(split_name[1], '%Y%m%dT%H%M%S')
-        self.ndvi_gtf_name = f"./geotiffs/{self.farm}/ndvi_{self.sense_datetime.strftime('%Y%m%d')}.tiff"
-        self.evi_gtf_name = f"./geotiffs/{self.farm}/evi_{self.sense_datetime.strftime('%Y%m%d')}.tiff"
-        self.color_gtf_name = f"./geotiffs/{self.farm}/color_{self.sense_datetime.strftime('%Y%m%d')}.tiff"
-        self.lai_gtf_name = f"./geotiffs/{self.farm}/lai_{self.sense_datetime.strftime('%Y%m%d')}.tiff"
+        self.ndvi_gtf_name = f"./geotiffs/{self.farm}/ndvi_{self.sense_datetime.strftime('%Y%m%dT%H%M')}.tiff"
+        self.evi_gtf_name = f"./geotiffs/{self.farm}/evi_{self.sense_datetime.strftime('%Y%m%dT%H%M')}.tiff"
+        self.color_gtf_name = f"./geotiffs/{self.farm}/color_{self.sense_datetime.strftime('%Y%m%dT%H%M')}.tiff"
+        self.lai_gtf_name = f"./geotiffs/{self.farm}/lai_{self.sense_datetime.strftime('%Y%m%dT%H%M')}.tiff"
 
     def _tmp_img_cleanup(self):
         """Deletes all Currently expedient hardcoded delete of """
         for fn in [x for x in os.listdir('./tmp_img/')]:
             os.remove(f'./tmp_img/{fn}')
 
+    def _safe_folder_move(self):
+        """Moves SAFE folder from unprocessed folder into processed folder"""
+        shutil.move(f'/Volumes/BIGUS_Storage/SAFE data/Unprocessed folders/{self.safe_folder}',
+                    f'/Volumes/BIGUS_Storage/SAFE data/Processed folders/{self.safe_folder}')
+
     def gather_pdk_stats(self, index: str = 'ndvi'):
         """accepts desired index ('ndvi' or 'evi'), loops thru all paddocks in the geojsons, and returns DataFrame"""
 
         if index.lower() == 'evi':
-            index_path = f"./geotiffs/{self.farm}/evi_{self.sense_datetime.strftime('%Y%m%d')}.tiff"
+            index_path = f"./geotiffs/{self.farm}/evi_{self.sense_datetime.strftime('%Y%m%dT%H%M')}.tiff"
         elif index.lower() == 'ndvi':
-            index_path = f"./geotiffs/{self.farm}/ndvi_{self.sense_datetime.strftime('%Y%m%d')}.tiff"
+            index_path = f"./geotiffs/{self.farm}/ndvi_{self.sense_datetime.strftime('%Y%m%dT%H%M')}.tiff"
         elif index.lower() == 'lai':
-            index_path = f"./geotiffs/{self.farm}/lai_{self.sense_datetime.strftime('%Y%m%d')}.tiff"
+            index_path = f"./geotiffs/{self.farm}/lai_{self.sense_datetime.strftime('%Y%m%dT%H%M')}.tiff"
         else:
             print('Invalid index chosen. Chose either "evi" or "ndvi"')
             return {'result': 'Invalid index parameter provided'}
@@ -288,7 +294,7 @@ class SentinelPass:
 
         all_pdk_df = pd.concat(all_pdk_series, axis=0)
 
-        all_pdk_df.to_csv(f"./stats/{self.farm}/{index}_{self.sense_datetime.strftime('%Y%m%d')}_stats.csv")
+        all_pdk_df.to_csv(f"./stats/{self.farm}/{index}_{self.sense_datetime.strftime('%Y%m%dT%H%M')}_stats.csv")
 
         return all_pdk_df
 
@@ -342,14 +348,5 @@ class SentinelPass:
         fig.add_axes(ax)
 
         ax.imshow(img_norm, cmap='RdYlGn')
-        plt.savefig(f"./pics/{self.farm}/{index.lower()}_{self.sense_datetime.strftime('%Y%m%d')}.png", transparent=True)
+        plt.savefig(f"./pics/{self.farm}/{index.lower()}_{self.sense_datetime.strftime('%Y%m%dT%H%M')}.png", transparent=True)
         plt.close()
-
-    # TODO: Function to implement logic checking for clouds in FOV - seems like some non-visible clouds affect indices
-    # Logic inputs - count of cloud estimated pixels on 60m jp2, mean values for both EVI + NDVI (which extreme?)
-    # Where to implement result? Dictionary for each paddock? Depends on database structure
-
-    # TODO: add NDVI data to database
-
-
-

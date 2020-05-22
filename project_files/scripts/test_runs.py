@@ -5,9 +5,12 @@ from pprint import pprint as pp
 import os
 
 if __name__ == '__main__':
-    path_str = 'S2B_MSIL2A_20200513T164839_N0214_R026_T16TCM_20200513T224015.SAFE'
-
-    votm = SentinelPass(path_str, 'votm')
-    votm.gather_pdk_stats('ndvi')
-    votm.gather_pdk_stats('evi')
-    votm.gather_pdk_stats('lai')
+    for foldername in os.listdir('/Volumes/BIGUS_Storage/SAFE data/Unprocessed folders/'):
+        if foldername[-4:] == 'SAFE':
+            path_str = foldername
+            votm = SentinelPass(path_str, 'votm')
+            votm.gather_pdk_stats('ndvi')
+            votm.gather_pdk_stats('evi')
+            votm.gather_pdk_stats('lai')
+            votm.geotiff_to_png('ndvi')
+            votm.geotiff_to_png('evi')
