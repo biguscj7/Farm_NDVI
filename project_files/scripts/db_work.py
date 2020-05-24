@@ -2,6 +2,7 @@ import sqlite3
 from sqlite3 import Error
 import pandas as pd
 from datetime import datetime as dt
+import numpy as np
 from pprint import  pprint as pp
 import os
 
@@ -28,15 +29,22 @@ def stats_to_df(filename: str, timestamp, conn):
     file_df = pd.read_csv(f'../stats/votm/{filename}')
     file_df['date_time'] = timestamp.isoformat()
 
-    file_df.set_index('date_time', inplace=True)
     file_df.rename(columns={'Unnamed: 0': 'georegion'}, inplace=True)
 
-    file_df.to_sql('evi', conn, if_exists='append')
+    if file_df['std'][0] <= 0.01:
+        cld_prb_ser = pd.Series(100, index=np.arange(file_df.shape[0]), name='clouds', dtype=np.int16)
+    else:
+        cld_prb_ser = pd.Series(0, index=np.arange(file_df.shape[0]), name='clouds', dtype=np.int16)
+
+    with_cld_df = pd.concat([file_df, cld_prb_ser], axis=1)
+
+    with_cld_df.to_sql('lai', conn, if_exists='append')
 
 if __name__ == '__main__':
-    c = create_connection('../db/test.db')
+    c = create_connection('../db/test1.db')
+    c.execute('pragma encoding=UTF8')
 
-    evi_filename = [filename for filename in os.listdir('../stats/votm') if filename[0:3] == 'clo']
+    evi_filename = [filename for filename in os.listdir('../stats/votm') if filename[0:3] == 'lai']
 
     if c is not None:
         for filename in evi_filename:
