@@ -57,7 +57,7 @@ class SentinelPass:
         """Accepts the base path for a set of download files and populates a dictionary with file paths for multiple items"""
         self.band_dict = {
             'band02': '',
-            'band03': '',
+            'TCI': '',
             'band04': '',
             'band05': '',
             'band08': '',
@@ -70,8 +70,8 @@ class SentinelPass:
                 if file.endswith("B02_10m.jp2"):
                     self.band_dict['band02'] = os.path.join(root, file)
                     self.b2_fn = file # pulls filename rather than path for parsing datetime
-                elif file.endswith("B03_10m.jp2"):
-                    self.band_dict['band03'] = os.path.join(root, file)
+                elif file.endswith("TCI_10m.jp2"):
+                    self.band_dict['TCI'] = os.path.join(root, file)
                 elif file.endswith("B04_10m.jp2"):
                     self.band_dict['band04'] = os.path.join(root, file)
                 elif file.endswith("B08_10m.jp2"):
@@ -106,13 +106,14 @@ class SentinelPass:
             })
 
             with rasterio.open(f'./tmp_img/{band}.tiff', 'w', **kwargs) as dst:
-                reproject(source=rasterio.band(src, 1),
-                          destination=rasterio.band(dst, 1),
-                          src_transform=src.transform,
-                          src_crs=src.crs,
-                          dst_transform=transform,
-                          dst_crs=dst_crs,
-                          resampling=Resampling.nearest)
+                for i in range(1, src.count + 1):
+                    reproject(source=rasterio.band(src, i),
+                              destination=rasterio.band(dst, i),
+                              src_transform=src.transform,
+                              src_crs=src.crs,
+                              dst_transform=transform,
+                              dst_crs=dst_crs,
+                              resampling=Resampling.nearest)
 
     def _ndvi_square(self):
         """parses the b4 and b8 data down to a simple square around the farm"""
@@ -186,28 +187,17 @@ class SentinelPass:
 
     def _color_square(self):
         """parses the b2, b3, and b4 into an full color array around the farm"""
-        with rasterio.open('./tmp_img/band04.tiff', 'r') as b4:
-            b4_img, b4_transform = rasterio.mask.mask(b4, self.pad_geom.geometry, crop=True)
-            b4_out_meta = b4.meta.copy()
-            b4_out_meta.update({'driver': 'GTiff',
-                                'height': b4_img.shape[1],
-                                'width': b4_img.shape[2],
-                                'transform': b4_transform,
+        with rasterio.open('./tmp_img/TCI.tiff', 'r') as tci:
+            tci_img, tci_transform = rasterio.mask.mask(tci, self.pad_geom.geometry, crop=True)
+            tci_out_meta = tci.meta.copy()
+            tci_out_meta.update({'driver': 'GTiff',
+                                'height': tci_img.shape[1],
+                                'width': tci_img.shape[2],
+                                'transform': tci_transform,
                                 'count': 3})
-            self.red = b4_img
 
-        with rasterio.open('./tmp_img/band03.tiff', 'r') as b3:
-            b3_img, _ = rasterio.mask.mask(b3, self.pad_geom.geometry, crop=True)
-            self.green = b3_img
-
-        with rasterio.open('./tmp_img/band02.tiff', 'r') as b2:
-            b2_img, _ = rasterio.mask.mask(b2, self.pad_geom.geometry, crop=True)
-            self.blue = b2_img
-
-        with rasterio.open(self.color_gtf_name, 'w', **b4_out_meta) as dest:
-            dest.write(b4_img[0], 1)
-            dest.write(b3_img[0], 2)
-            dest.write(b2_img[0], 3)
+        with rasterio.open(self.color_gtf_name, 'w', **tci_out_meta) as dest:
+            dest.write(tci_img)
 
     def _cloud_processing(self):
         """Will process the cloud masking data to assess the likelihood of clouds"""
@@ -294,7 +284,7 @@ class SentinelPass:
 
         all_pdk_df = pd.concat(all_pdk_series, axis=0)
 
-        all_pdk_df.to_csv(f"./stats/{self.farm}/{index}_{self.sense_datetime.strftime('%Y%m%dT%H%M')}_stats.csv")
+        all_pdk_df.to_csv(f"./stats/{self.farm}/{index}_{self.sense_datetime.strftime('%Y%m%dT%H%M')}.csv")
 
         return all_pdk_df
 
