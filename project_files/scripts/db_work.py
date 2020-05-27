@@ -30,17 +30,17 @@ def filename_to_dt(filename: str):
 def stats_to_df(filename: str, timestamp, conn, cloud_dict):
     """Opens csv file into dataframe for writing to db"""
     file_df = pd.read_csv(f'../stats/votm/{filename}')
-    file_df['date_time'] = timestamp.isoformat()
+    file_df['date_time'] = timestamp.isoformat() # no datetime inside file, must pull from name
 
     file_df.rename(columns={'Unnamed: 0': 'georegion'}, inplace=True)
 
     stamp_str = timestamp.strftime('%Y%m%dT%H%M') # include try/except for missing dict key
 
-    cld_prb_ser = pd.Series(cloud_dict[stamp_str], index=np.arange(file_df.shape[0]), name='clouds', dtype=np.int16)
+    cld_df = pd.DataFrame(cloud_dict[stamp_str], index=np.arange(file_df.shape[0]), dtype=np.bool)
 
-    with_cld_df = pd.concat([file_df, cld_prb_ser], axis=1)
+    with_cld_df = pd.concat([file_df, cld_df], axis=1)
 
-    with_cld_df.to_sql('lai', conn, if_exists='append')
+    with_cld_df.to_sql('ndvi', conn, if_exists='append')
 
 if __name__ == '__main__':
     c = create_connection('../db/test2.db')
@@ -49,7 +49,7 @@ if __name__ == '__main__':
     with open('../stats/votm/cloud.json') as cld_file:
         cld_dict = json.load(cld_file)
 
-    evi_filename = [filename for filename in os.listdir('../stats/votm') if filename.startswith('lai')]
+    evi_filename = [filename for filename in os.listdir('../stats/votm') if filename.startswith('ndvi')]
 
     if c is not None:
         for filename in evi_filename:
