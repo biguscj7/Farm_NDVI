@@ -25,9 +25,12 @@ Graphs / charts and other non-imagery based products to enable assessment.
 In work
 
 ## Thoughts for continued work
+- Implement 'additive' classification of clouds rather than re-doing the whole thing
 - Graph info from sentinelapi query for date & clouds
 - Automate download/unzip/processing of files
 - Decide on what data to retain
+
+## Completed updates
 - Implement processing on the c440 machine
 - Update the c440 machine to Ubuntu 20
 

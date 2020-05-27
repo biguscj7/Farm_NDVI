@@ -51,6 +51,7 @@ if __name__ == '__main__':
 
     evi_filename = [filename for filename in os.listdir('../stats/votm') if filename.startswith('ndvi')]
 
+    # before opening a file, check to see if it's already got data in the cloud dict.
     if c is not None:
         for filename in evi_filename:
             timestamp = filename_to_dt(filename)
