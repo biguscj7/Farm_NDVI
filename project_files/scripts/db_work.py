@@ -27,7 +27,7 @@ def filename_to_dt(filename: str):
 
     return dt.strptime(dt_str, '%Y%m%dT%H%M')
 
-def stats_to_df(filename: str, timestamp, conn, cloud_dict):
+def stats_to_db(filename: str, timestamp, conn, cloud_dict):
     """Opens csv file into dataframe for writing to db"""
     file_df = pd.read_csv(f'../stats/votm/{filename}')
     file_df['date_time'] = timestamp.isoformat() # no datetime inside file, must pull from name
@@ -42,6 +42,14 @@ def stats_to_df(filename: str, timestamp, conn, cloud_dict):
 
     with_cld_df.to_sql('ndvi', conn, if_exists='append')
 
+def clouds_to_db():
+    pass
+
+def get_db_contents():
+    pass
+
+
+
 if __name__ == '__main__':
     c = create_connection('../db/test2.db')
     c.execute('pragma encoding=UTF8')
@@ -55,7 +63,7 @@ if __name__ == '__main__':
     if c is not None:
         for filename in evi_filename:
             timestamp = filename_to_dt(filename)
-            stats_to_df(filename, timestamp, c, cld_dict)
+            stats_to_db(filename, timestamp, c, cld_dict)
 
     else:
         print("Error! cannot create the database connection.")
