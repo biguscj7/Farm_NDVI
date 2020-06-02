@@ -27,7 +27,7 @@ def filename_to_dt(filename: str):
 
     return dt.strptime(dt_str, '%Y%m%dT%H%M')
 
-def stats_to_db(filename: str, timestamp, conn, cloud_dict):
+def stats_to_db(filename: str, timestamp, conn, cloud_dict, index):
     """Opens csv file into dataframe for writing to db"""
     file_df = pd.read_csv(f'../stats/votm/{filename}')
     file_df['date_time'] = timestamp.isoformat() # no datetime inside file, must pull from name
@@ -40,7 +40,7 @@ def stats_to_db(filename: str, timestamp, conn, cloud_dict):
 
     with_cld_df = pd.concat([file_df, cld_df], axis=1)
 
-    with_cld_df.to_sql('ndvi', conn, if_exists='append')
+    with_cld_df.to_sql(index, conn, if_exists='append')
 
 def clouds_to_db():
     pass
@@ -49,23 +49,24 @@ def get_db_contents():
     pass
 
 
-
 if __name__ == '__main__':
-    c = create_connection('../db/test2.db')
+    c = create_connection('../db/2_Jun.db')
     c.execute('pragma encoding=UTF8')
 
-    with open('../stats/votm/cloud.json') as cld_file:
-        cld_dict = json.load(cld_file)
+    for index in ['ndvi', 'evi', 'lai']:
 
-    evi_filename = [filename for filename in os.listdir('../stats/votm') if filename.startswith('ndvi')]
+        with open('../stats/votm/cloud.json') as cld_file:
+            cld_dict = json.load(cld_file)
 
-    # before opening a file, check to see if it's already got data in the cloud dict.
-    if c is not None:
-        for filename in evi_filename:
-            timestamp = filename_to_dt(filename)
-            stats_to_db(filename, timestamp, c, cld_dict)
+        index_filename = [filename for filename in os.listdir('../stats/votm') if filename.startswith(index)]
 
-    else:
-        print("Error! cannot create the database connection.")
+        # before opening a file, check to see if it's already got data in the cloud dict.
+        if c is not None:
+            for filename in index_filename:
+                timestamp = filename_to_dt(filename)
+                stats_to_db(filename, timestamp, c, cld_dict, index)
+
+        else:
+            print("Error! cannot create the database connection.")
 
     c.close()

@@ -91,9 +91,8 @@ class SentinelPass:
     def _reproject_wgs84(self, band, file_path):
         """Reprojects jp2 into WGS84 crs and writes as GeoTIFF prior to masking file"""
 
-        dst_crs = 'epsg:4326'
-
         with rasterio.open(file_path, 'r') as src:
+            dst_crs = 'epsg:4326'
             transform, width, height = calculate_default_transform(
                 src.crs, dst_crs, src.width, src.height, *src.bounds)
             kwargs = src.meta.copy()
