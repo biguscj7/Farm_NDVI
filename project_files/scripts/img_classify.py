@@ -21,7 +21,7 @@ def filter_file_list(curr_list):
     return all_list
 
 
-def assess_image(new_list, data_dict):
+def assess_image(new_list):
     """Display image and prompt for assessment of cloud impacts, update the dict"""
     for file in new_list:
         timestamp = file.split('_')[1].split('.')[0]
@@ -48,9 +48,7 @@ def assess_image(new_list, data_dict):
             elif v.lower() == 'n':
                 dict_entry[timestamp][k] = False
 
-    data_dict.update(dict_entry)
-
-    return data_dict
+    pic_dict.update(dict_entry)
 
 
 def update_cloud_data(data_dict):
@@ -64,5 +62,6 @@ if __name__ == '__main__':
     pic_dict = get_current_data()
     curr_list = list(pic_dict.keys())
     update_list = filter_file_list(curr_list)
-    updated_dict = assess_image(update_list, pic_dict)
-    update_cloud_data(updated_dict)
+    # TODO: Fix the bug that's not writing data to the dictionary
+    assess_image(update_list) # BUG in the code, not writing all of the data to the dictionary for adding to file
+    update_cloud_data(pic_dict)
