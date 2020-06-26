@@ -25,6 +25,7 @@ Graphs / charts and other non-imagery based products to enable assessment.
 In work
 
 ## Thoughts for continued work
+- Part way through implementing environment variables for data storage on DigitalOcean droplet
 - Implement 'additive' classification of clouds rather than re-doing the whole thing
 - Graph info from sentinelapi query for date & clouds
 - Automate download/unzip/processing of files
