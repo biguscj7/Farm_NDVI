@@ -1,7 +1,4 @@
 from proj_class import SentinelPass
-import numpy as np
-import pandas as pd
-from pprint import pprint as pp
 import os
 
 if __name__ == '__main__':
