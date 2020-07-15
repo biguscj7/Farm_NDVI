@@ -48,7 +48,7 @@ def assess_image(new_list):
             elif v.lower() == 'n':
                 dict_entry[timestamp][k] = False
 
-    pic_dict.update(dict_entry)
+        pic_dict.update(dict_entry)
 
 
 def update_cloud_data(data_dict):
@@ -62,6 +62,5 @@ if __name__ == '__main__':
     pic_dict = get_current_data()
     curr_list = list(pic_dict.keys())
     update_list = filter_file_list(curr_list)
-    # TODO: Fix the bug that's not writing data to the dictionary
-    assess_image(update_list) # BUG in the code, not writing all of the data to the dictionary for adding to file
+    assess_image(update_list)
     update_cloud_data(pic_dict)
