@@ -42,9 +42,9 @@ class SentinelPass:
 
     def __init__(self,
                  safe_dir,
-                 safe_folder = '/Volumes/BIGUS_Storage/SAFE data/Unprocessed folders/',
-                 ):#farm_gdf,
-                 #db_conn):
+                 safe_folder='/Volumes/BIGUS_Storage/SAFE data/Unprocessed folders/',
+                 ):  # farm_gdf,
+        # db_conn):
         '''Accept the file path for a "SAFE" folder, a GeoDataframe with paddock info, and a database connection'''
         self.safe_folder = PurePath(safe_folder, safe_dir)
         self.file_dict = self._find_file_path(self.safe_folder)
@@ -107,8 +107,6 @@ class SentinelPass:
         pass
 
 
-
-
 class FarmKML:
     '''
     Class for dealing with KML files with paddock data and other geometries. Offers the option to define a
@@ -130,7 +128,6 @@ class FarmKML:
 
         return gpd.read_file(file_path, driver="KML")
 
-
     def _get_max_extents(self):
         '''Generates a new dataframe that includes a buffered polygon around the limits of the polygons from the KML'''
         bound_df = self.init_gdf.total_bounds  # max x / y for all in gdf
@@ -139,10 +136,10 @@ class FarmKML:
                          bound_df[1] + half_mile,
                          bound_df[2] + half_mile,
                          bound_df[3] + half_mile)
-        buffer_gdf = gpd.GeoDataFrame({'Name': ['buffered'], 'Description': 'Max extents of dataframe with pad', 'geometry': [buffer_box]},
-                                      crs="EPSG:4326")
+        buffer_gdf = gpd.GeoDataFrame(
+            {'Name': ['buffered'], 'Description': 'Max extents of dataframe with pad', 'geometry': [buffer_box]},
+            crs="EPSG:4326")
         return pd.concat([self.init_gdf, buffer_gdf], ignore_index=True)
-
 
     def _create_grazeable(self, outline_name, exclusion_name):
         '''Uses initial Geodataframe grazeable info to create a multi-poly with only grazeable land'''
@@ -157,15 +154,19 @@ class FarmKML:
             grazeable_poly = outline_poly
             trimmed_gdf = self.plus_extents_gdf.loc[(self.plus_extents_gdf.Name != outline_name)]
 
-        grazeable_gdf = gpd.GeoDataFrame({'Name': ['all_grazeable_land'], 'Description': None, 'geometry': [grazeable_poly]},
-                                      crs="EPSG:4326")
+        grazeable_gdf = gpd.GeoDataFrame(
+            {'Name': ['all_grazeable_land'], 'Description': None, 'geometry': [grazeable_poly]},
+            crs="EPSG:4326")
 
         return pd.concat([trimmed_gdf, grazeable_gdf], ignore_index=True)
 
     def _get_outline_id(self):
         '''Presents gdf data to user to select outline and exclusion if a factor'''
-        outline_index = int(input(f"Enter your choice for outline of grazeable land:\n{tabulate(self.plus_extents_gdf.iloc[:, 0:2], headers='keys')}\n"))
-        exclusion_index = int(input(f"Enter exclusion geometry if one exists, else enter '99':\n{tabulate(self.plus_extents_gdf.iloc[:, 0:2], headers='keys')}\n"))
+        # TODO: Add stepping through the dataframe in chunks to avoid not seeing the prompt
+        outline_index = int(input(f"\n{tabulate(self.plus_extents_gdf.iloc[:, 0:2], headers='keys')}\n"
+                                  f"Enter your choice for outline of grazeable land: "))
+        exclusion_index = int(input(f"\n{tabulate(self.plus_extents_gdf.iloc[:, 0:2], headers='keys')}\n"
+                                    f"Enter exclusion geometry if one exists, else enter '99': "))
 
         outline_name = self.plus_extents_gdf.iloc[outline_index].Name
 
@@ -176,7 +177,6 @@ class FarmKML:
 
             return outline_name, exclusion_name
 
-
     def tranform_crs(self, new_crs: str):
         '''Accepts a new crs and returns the transformed Geodataframe'''
         return self.plus_extents_gdf.to_crs(new_crs)
@@ -184,6 +184,7 @@ class FarmKML:
     def print_kml(self, printable_gdf):
         '''Prints the Geopandas data frame information nicely for review'''
         pp(printable_gdf)
+
 
 def sentinel_api(geojson):
     '''Testing API inclusion'''
@@ -212,11 +213,10 @@ def sentinel_api(geojson):
     pp(prod_df.cloudcoverpercentage)
 
 
-
 if __name__ == '__main__':
     votm = FarmKML()
-    #print(votm.grazeable_gdf)
-    #buff_str = votm.plus_extents_gdf[votm.plus_extents_gdf.Name == 'buffered'].geometry.to_json()
-    #buff_json = json.loads(buff_str)
-    #buff_json = buffered_ser.to_json()
-    #sentinel_api(buff_json)
+    print(votm.grazeable_gdf)
+    # buff_str = votm.plus_extents_gdf[votm.plus_extents_gdf.Name == 'buffered'].geometry.to_json()
+    # buff_json = json.loads(buff_str)
+    # buff_json = buffered_ser.to_json()
+    # sentinel_api(buff_json)
