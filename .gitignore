@@ -1,0 +1,7 @@
+*.tif
+*.tiff
+*.png
+*.pyc
+/project_files/tmp_img/
+/project_files/working_pics/
+/project_files/stats/votm
