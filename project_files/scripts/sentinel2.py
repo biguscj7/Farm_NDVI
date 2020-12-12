@@ -2,15 +2,20 @@
 This is a re-write of the original class for processing Sentinel 2 data into various indices. Upgrades include using
 only geopandas (not kml2geojson) and masking the jp2 down to a smaller file before doing processing.
 
-Improvements:
+Implemented:
 - Mask jp2 data before writing to geotiff
+- Print the various paddock/outline names and allow the user to choose which one is used to trim the files
+
+
+Improvements:
 - Simplified application of kml
 -- Use largest 'area' entry in geopandas?
 
 
 
 Optional upgrades:
-- Print the various paddock/outline names and allow the user to choose which one is used to trim the files
+- Implement use of CLDPRB from the 20m band as a discriminator for processing
+
 
 """
 
@@ -28,7 +33,6 @@ import rasterio.mask
 from rasterio.warp import calculate_default_transform, reproject, Resampling
 import fiona
 import numpy as np
-import os
 from datetime import datetime as dt
 from matplotlib import colors
 from matplotlib import pyplot as plt
@@ -39,14 +43,13 @@ import json
 class SentinelPass:
     """
     Class is for handling a single set of images from Sentinel-2. Accepts a GeoDataFrame for processing, a database connection,
-    and the folder name for a SAFE folder. A default f
-    a GeoDataframe with paddock info, and a database connection
+    and the folder name for a SAFE folder.
     """
 
     def __init__(
         self,
         farm_gdf,
-        db_conn,
+        # db_conn,
         safe_file,
         safe_dir="/Volumes/BIGUS_Storage/SAFE data/Unprocessed folders/",
     ):
@@ -54,14 +57,13 @@ class SentinelPass:
         self.file_dict = self._find_file_path(self.safe_folder)
         self.sense_time = self._generate_sensing_time(safe_file)
         self.farm_gdf = farm_gdf
-        self.buffered_geom = self.pull_buffered_geom()
+        self.jp2_to_crop_gtif()
 
     def _find_file_path(self, safe_folder: str) -> dict:
         """Accepts the base path for a set of download files and populates a dictionary with file paths for multiple items"""
         file_dict = {
             "B02_10m": None,
             "B04_10m": None,
-            "B05_10m": None,
             "B08_10m": None,
             "B05_20m": None,
             "B8A_20m": None,
@@ -72,10 +74,10 @@ class SentinelPass:
         }
 
         for root, dirs, files in os.walk(safe_folder):
-            for k, _ in file_dict.items():
+            for k in file_dict.keys():
                 for file in files:
                     if file.endswith(f"{k}.jp2"):
-                        file_dict.update({k: PurePath(root, file)})
+                        file_dict.update({k: Path(root, file)})
 
         return file_dict
 
@@ -84,9 +86,38 @@ class SentinelPass:
         date_str = safe_file_name.split("_")[2]
         return dt.strptime(date_str, "%Y%m%dT%H%M%S")
 
-    def pull_buffered_geom(self):
-        """Function to process the GeoDataFrame and return the geometry associated with the 'buffered' entry"""
-        pass
+    def jp2_to_crop_gtif(self):
+        """Converts all the jp2 files in the file_dict to GeoTIFFs and crops them to the 'buffered' extents"""
+        # TODO: Consider using sense_time for filename labling on save rather than tmp
+
+        with rasterio.open(self.file_dict["B02_10m"]) as sample_file:
+            safe_crs = sample_file.crs
+
+        if self.farm_gdf.crs != safe_crs:
+            conv_gdf = self.farm_gdf.to_crs(crs=safe_crs)
+        else:
+            conv_gdf = self.farm_gdf
+
+        shape = conv_gdf[conv_gdf.Name == "buffered"].geometry
+
+        temp_dir = Path("./Farm_NDVI/project_files/tmp_img").resolve()
+
+        for k, v in self.file_dict.items():
+            with rasterio.open(v) as src:
+                out_image, out_transform = rasterio.mask.mask(src, shape, crop=True)
+                out_meta = src.meta
+
+                out_meta.update(
+                    {
+                        "driver": "GTiff",
+                        "height": out_image.shape[1],
+                        "width": out_image.shape[2],
+                        "transform": out_transform,
+                    }
+                )
+
+            with rasterio.open(Path(temp_dir, f"{k}.tif"), "w", **out_meta) as dest:
+                dest.write(out_image)
 
     def generate_ndvi(self):
         """Open required band images and saves an NDVI geotiff for the bounding box"""
@@ -99,23 +130,6 @@ class SentinelPass:
 
     def generate_lai(self):
         """Uses the band data to generate an lai geotiff"""
-        pass
-
-    def generate_tci(self):
-        """Uses the 3 color bands to generate a png file"""
-        pass
-
-    def _trim_band(self):
-        """Uses the image limits to trim a band jp2 image, need to decide whether to store the image in temp or not"""
-        # TODO: Use specific geometry trim the jp2 images
-        pass
-
-    def generate_aot(self):
-        """Generates the geotiff info for aerosol optical thickness"""
-        pass
-
-    def generate_wvp(self):
-        """Generates data from water vapor info"""
         pass
 
 
@@ -131,7 +145,8 @@ class FarmKML:
         outline: str = None,
         exclusion: str = None,
     ):
-        self.path = Path(f"../KMZs/votm/{file_name}")
+        self.base_path = Path("./Farm_NDVI/project_files/KMZs/votm").resolve()
+        self.path = Path(self.base_path, file_name)
         self.init_gdf = self._parse_kml(self.path)
         self.plus_extents_gdf = self._get_max_extents()
         if outline:
@@ -266,8 +281,8 @@ def sentinel_api(geojson):
 
 if __name__ == "__main__":
     votm = FarmKML()
-    # print(votm.grazeable_gdf)
-    # buff_str = votm.plus_extents_gdf[votm.plus_extents_gdf.Name == 'buffered'].geometry.to_json()
-    # buff_json = json.loads(buff_str)
-    # buff_json = buffered_ser.to_json()
-    # sentinel_api(buff_json)
+    sample_safe = SentinelPass(
+        votm.grazeable_gdf,
+        "S2B_MSIL2A_20200917T163839_N0214_R126_T16TCM_20200917T223623.SAFE",
+    )
+    sample_safe.jp2_to_crop_gtif
