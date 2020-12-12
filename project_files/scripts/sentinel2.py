@@ -150,8 +150,8 @@ class FarmKML:
         bound_df = self.init_gdf.total_bounds  # max x / y for all in gdf
         half_mile = 0.0083  # rough constant for 1/2 nm buffer latitude (using for longitude as well)
         buffer_box = box(
-            bound_df[0] + half_mile,
-            bound_df[1] + half_mile,
+            bound_df[0] - half_mile,
+            bound_df[1] - half_mile,
             bound_df[2] + half_mile,
             bound_df[3] + half_mile,
         )
